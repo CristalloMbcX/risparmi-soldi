@@ -158,10 +158,14 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
   .toast{bottom:calc(150px + env(safe-area-inset-bottom))}
   main{padding:12px}
   .card{padding:14px;border-radius:14px}
-  .kpis{grid-template-columns:1fr 1fr;gap:10px}
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
   .kpis .kpi:first-child{grid-column:1/-1}
-  .kpi{padding:12px}
-  .kpi .val{font-size:20px}
+  .kpi{padding:10px}
+  .kpi .lbl{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi .val{font-size:clamp(13px,4vw,17px);white-space:nowrap}
+  .kpis .kpi:not(:first-child) .sub{display:none}
+  .kpis .kpi:first-child{padding:12px 14px}
+  .kpis .kpi:first-child .lbl{font-size:13px}
   .kpis .kpi:first-child .val{font-size:30px}
   .chartbox{height:230px}
   th,td{padding:8px 6px}
@@ -199,8 +203,8 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
     <div class="brand">💶 Soldi Spesi</div>
     <button class="btn primary desk-add" type="button" data-add>+ Nuovo movimento</button>
     <nav role="tablist">
-      <button data-tab="panoramica" aria-selected="true"><span class="ni" aria-hidden="true">📊</span><span>Panoramica</span></button>
-      <button data-tab="movimenti"><span class="ni" aria-hidden="true">📋</span><span>Movimenti</span></button>
+      <button data-tab="movimenti" aria-selected="true"><span class="ni" aria-hidden="true">🏠</span><span>Movimenti</span></button>
+      <button data-tab="panoramica"><span class="ni" aria-hidden="true">📊</span><span>Grafici</span></button>
       <button data-tab="risparmi"><span class="ni" aria-hidden="true">🏦</span><span>Risparmi</span></button>
       <button data-tab="dati"><span class="ni" aria-hidden="true">⇅</span><span class="nl-long">Importa / Esporta</span><span class="nl-short">Dati</span></button>
     </nav>
@@ -227,14 +231,30 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
 </header>
 
 <main>
-<!-- PANORAMICA -->
-<section id="tab-panoramica">
+<!-- MOVIMENTI -->
+<section id="tab-movimenti">
   <div class="kpis">
     <div class="kpi"><div class="lbl">Patrimonio corrente</div><div class="val" id="kPatr">–</div><div class="sub" id="kPatrSub"></div></div>
-    <div class="kpi"><div class="lbl">Entrate nel periodo</div><div class="val pos" id="kIn">–</div><div class="sub" id="kInSub"></div></div>
-    <div class="kpi"><div class="lbl">Uscite nel periodo</div><div class="val neg" id="kOut">–</div><div class="sub" id="kOutSub"></div></div>
-    <div class="kpi"><div class="lbl">Saldo del periodo</div><div class="val" id="kNet">–</div><div class="sub" id="kNetSub"></div></div>
+    <div class="kpi"><div class="lbl">Entrate</div><div class="val pos" id="kIn">–</div><div class="sub" id="kInSub"></div></div>
+    <div class="kpi"><div class="lbl">Uscite</div><div class="val neg" id="kOut">–</div><div class="sub" id="kOutSub"></div></div>
+    <div class="kpi"><div class="lbl">Saldo</div><div class="val" id="kNet">–</div><div class="sub" id="kNetSub"></div></div>
   </div>
+  <div class="card">
+    <div class="row" style="margin-bottom:12px">
+      <div class="field"><label for="fTipo">Tipo</label>
+        <select id="fTipo"><option value="">Tutti</option><option value="uscita">Uscite</option><option value="entrata">Entrate</option></select></div>
+      <div class="field"><label for="fCat">Categoria</label><select id="fCat"><option value="">Tutte</option></select></div>
+      <div class="field" style="flex:1 1 160px"><label for="fTesto">Cerca</label><input id="fTesto" placeholder="categoria o nota"></div>
+      <div class="field"><label for="fSort">Ordina per</label>
+        <select id="fSort"><option value="data:-1">Data, più recenti</option><option value="data:1">Data, più vecchi</option><option value="importo:-1">Importo, dal più alto</option><option value="importo:1">Importo, dal più basso</option><option value="categoria:1">Categoria, A-Z</option></select></div>
+      <div class="muted small right" id="movCount" style="align-self:center"></div>
+    </div>
+    <div class="tablewrap"><table id="tblMov"></table></div>
+  </div>
+</section>
+
+<!-- PANORAMICA -->
+<section id="tab-panoramica" hidden>
   <div class="card">
     <h2 id="trendTitle">Entrate e uscite</h2>
     <div class="legend"><span><i style="background:var(--s-in)"></i>Entrate</span><span><i style="background:var(--s-out)"></i>Uscite</span></div>
@@ -253,20 +273,6 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
   <div class="card">
     <h2>Riepilogo per categoria</h2>
     <div class="tablewrap"><table id="tblCat"></table></div>
-  </div>
-</section>
-
-<!-- MOVIMENTI -->
-<section id="tab-movimenti" hidden>
-  <div class="card">
-    <div class="row" style="margin-bottom:12px">
-      <div class="field"><label for="fTipo">Tipo</label>
-        <select id="fTipo"><option value="">Tutti</option><option value="uscita">Uscite</option><option value="entrata">Entrate</option></select></div>
-      <div class="field"><label for="fCat">Categoria</label><select id="fCat"><option value="">Tutte</option></select></div>
-      <div class="field" style="flex:1 1 160px"><label for="fTesto">Cerca</label><input id="fTesto" placeholder="categoria o nota"></div>
-      <div class="muted small right" id="movCount" style="align-self:center"></div>
-    </div>
-    <div class="tablewrap"><table id="tblMov"></table></div>
   </div>
 </section>
 
@@ -640,7 +646,7 @@ function renderMov(){
   const range = getRange(), ft = $('#fTipo').value, fc = $('#fCat').value, q = $('#fTesto').value.trim().toLowerCase();
   let rows = db.mov.filter(x => inRange(x.data, range) && (!ft || x.tipo===ft) && (!fc || x.categoria===fc) && (!q || (x.categoria+' '+(x.note||'')).toLowerCase().includes(q)));
   const k = sortMov.k, d = sortMov.dir;
-  rows.sort((p,q2)=>{ let a = p[k], b = q2[k]; if(k==='importo'){ a = p.tipo==='entrata'?a:-a; b = q2.tipo==='entrata'?b:-b; } const c = typeof a === 'number' ? a-b : String(a||'').localeCompare(String(b||''),'it'); return c*d || (q2.creato||'').localeCompare(p.creato||''); });
+  rows.sort((p,q2)=>{ let a = p[k], b = q2[k]; const c = typeof a === 'number' ? a-b : String(a||'').localeCompare(String(b||''),'it'); return c*d || (q2.creato||'').localeCompare(p.creato||''); });
   const tin = rows.filter(x=>x.tipo==='entrata').reduce((s,x)=>s+x.importo,0), tout = rows.filter(x=>x.tipo==='uscita').reduce((s,x)=>s+x.importo,0);
   $('#movCount').textContent = `${rows.length} movimenti · entrate ${fmt(tin)} · uscite ${fmt(tout)}`;
   const arrow = key => sortMov.k===key ? (sortMov.dir>0?' ▲':' ▼') : '';
@@ -709,7 +715,7 @@ $('#movCancel').onclick = () => { closeMov(); if(editMov) resetMovForm(); };
 document.querySelectorAll('input[name=tipo]').forEach(r => r.addEventListener('change', renderDatalists));
 $('#tblMov').addEventListener('click', async e => {
   const th = e.target.closest('th[data-s]');
-  if(th){ const k = th.dataset.s; sortMov = {k, dir: sortMov.k===k ? -sortMov.dir : (k==='data'||k==='importo' ? -1 : 1)}; renderMov(); return; }
+  if(th){ const k = th.dataset.s; sortMov = {k, dir: sortMov.k===k ? -sortMov.dir : (k==='data'||k==='importo' ? -1 : 1)}; $('#fSort').value = `${sortMov.k}:${sortMov.dir}`; renderMov(); return; }
   const ed = e.target.closest('[data-edit]'), del = e.target.closest('[data-del]');
   if(ed){ const x = db.mov.find(m=>m.id===ed.dataset.edit); editMov = x.id;
     document.querySelector(`input[name=tipo][value=${x.tipo}]`).checked = true;
@@ -720,6 +726,7 @@ $('#tblMov').addEventListener('click', async e => {
     if(await confirmBox(`Eliminare ${x.tipo} di ${fmt(x.importo)} (${x.categoria}) del ${itDate(x.data)}?`, 'Elimina')){ db.mov = db.mov.filter(m=>m.id!==x.id); save(); renderAll(); toast('Movimento eliminato'); } }
 });
 ['#fTipo','#fCat'].forEach(s => $(s).addEventListener('change', renderMov));
+$('#fSort').addEventListener('change', () => { const [k,d] = $('#fSort').value.split(':'); sortMov = {k, dir:+d}; renderMov(); });
 $('#fTesto').addEventListener('input', renderMov);
 
 /* ============ Form risparmi ============ */
@@ -924,7 +931,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderOver
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button').forEach(x => x.setAttribute('aria-selected', x===b));
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'tab-' + b.dataset.tab);
-  try{ localStorage.setItem('soldiSpesi.tab', b.dataset.tab); }catch(e){}
+  window.scrollTo(0,0);
   if(b.dataset.tab === 'panoramica') renderOverview();
 });
 $('#periodo').onchange = () => { $('#customRange').hidden = $('#periodo').value !== 'custom';
@@ -940,7 +947,6 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); instal
 $('#installBtn').onclick = async () => { if(!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(()=>{}); installEvt = null; $('#installRow').hidden = true; };
 if(matchMedia('(display-mode: standalone)').matches || navigator.standalone) $('#installCard').hidden = true;
 if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
-try{ const t = localStorage.getItem('soldiSpesi.tab'); if(t) document.querySelector(`nav button[data-tab="${t}"]`)?.click(); }catch(e){}
 </script>
 </body>
 </html>
