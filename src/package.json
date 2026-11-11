@@ -1,0 +1,6 @@
+{
+  "name": "soldi-spesi",
+  "private": true,
+  "scripts": { "build": "node build.js" },
+  "dependencies": { "chart.js": "4.4.1", "xlsx": "0.18.5" }
+}
