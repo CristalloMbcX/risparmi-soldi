@@ -107,6 +107,14 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .right{margin-left:auto}
 .foot{font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:4px;font:inherit;font-size:13px;padding:5px 11px;border-radius:99px;border:1px solid var(--axis);background:var(--surface);color:var(--ink);cursor:pointer}
+span.chip{cursor:default}
+button.chip:hover{background:var(--surface-2)}
+button.chip.on,button.chip.on:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip-x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 2px 2px 4px}
+.chip-x:hover{color:var(--danger)}
+#catChips{max-height:132px;overflow:auto}
 .nl-short,.fab{display:none}
 .ni{display:none}
 /* modulo nuovo movimento: finestra */
@@ -275,7 +283,7 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
 <section id="tab-dati" hidden>
   <div class="card">
     <h2>Importa</h2>
-    <p class="muted small" style="margin-top:-6px">Accetta file .csv, .xlsx e .xls. Le colonne riconosciute sono <b>Data</b>, <b>Tipo</b> (Entrata/Uscita), <b>Categoria</b>, <b>Importo</b> e <b>Nota</b>. Se manca la colonna Tipo, gli importi negativi diventano uscite e quelli positivi entrate. Un foglio o file con colonne <b>Data</b>, <b>Voce</b> e <b>Saldo</b> viene importato nei risparmi. Le date possono essere 31/12/2026 o 2026-12-31; gli importi 1.234,56 o 1234.56.</p>
+    <p class="muted small" style="margin-top:-6px">Accetta file .csv, .xlsx e .xls, senza bisogno di modificarli. Dal tuo foglio vengono lette le colonne <b>Data</b>, <b>Descrizione</b> (diventa la nota), <b>Costo / Ricavo</b> (l'importo) ed <b>Etichetta</b> (la categoria); Mese e Settimana vengono ignorate. Gli importi negativi sono uscite e quelli positivi entrate. Se nel foglio sono tutti positivi, sono entrate solo le righe con una categoria di entrata (Stipendio, Vendite...). Vanno bene anche colonne chiamate Categoria, Importo, Tipo e Nota. Un foglio con <b>Data</b>, <b>Voce</b> e <b>Saldo</b> viene importato nei risparmi.</p>
     <div class="row">
       <input type="file" id="fileIn" accept=".csv,.xlsx,.xls,.txt">
       <div class="field"><label for="impMode">Modalità</label>
@@ -292,6 +300,17 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
       <button class="btn" id="expCsvRisp">Risparmi (.csv)</button>
       <label class="small" style="align-self:center"><input type="checkbox" id="expPeriodo"> solo i movimenti del periodo selezionato</label>
     </div>
+  </div>
+  <div class="card">
+    <h2>Categorie</h2>
+    <p class="muted small" style="margin-top:-6px">Sono le categorie proposte quando aggiungi un movimento. Ne puoi aggiungere quando vuoi, anche scrivendone una nuova direttamente nel movimento. Toglierne una non cancella i movimenti già registrati.</p>
+    <h3>Uscite</h3><div class="chips" id="cats-uscita" style="margin-bottom:12px"></div>
+    <h3>Entrate</h3><div class="chips" id="cats-entrata" style="margin-bottom:12px"></div>
+    <form id="catForm" class="row" autocomplete="off">
+      <div class="field" style="flex:1 1 180px"><label for="newCat">Nuova categoria</label><input id="newCat" required></div>
+      <div class="field"><label for="newCatTipo">Tipo</label><select id="newCatTipo"><option value="uscita">Uscita</option><option value="entrata">Entrata</option></select></div>
+      <button class="btn primary" type="submit">Aggiungi</button>
+    </form>
   </div>
   <div class="card">
     <h2>Modelli</h2>
@@ -328,7 +347,8 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
         </div>
       </div>
       <div class="field"><label for="mData">Data</label><input type="date" id="mData" required></div>
-      <div class="field" style="flex:1 1 160px"><label for="mCat">Categoria</label><input id="mCat" list="catList" required placeholder="es. Spesa"></div>
+      <div class="field" style="flex:1 1 160px"><label for="mCat">Categoria</label><input id="mCat" list="catList" required placeholder="scegli qui sotto o scrivine una nuova"></div>
+      <div class="chips" id="catChips" style="flex:1 1 100%"></div>
       <div class="field" style="width:130px"><label for="mImp">Importo (€)</label><input id="mImp" inputmode="decimal" required placeholder="0,00"></div>
       <div class="field" style="flex:2 1 180px"><label for="mNote">Nota (facoltativa)</label><input id="mNote"></div>
       <button class="btn primary" type="submit" id="movSubmit">Aggiungi</button>
@@ -385,9 +405,17 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 "use strict";
 /* ============ Archivio ============ */
 const KEY = 'soldiSpesi.v1';
-const DEFAULT_CATS_OUT = ['Spesa','Casa','Bollette','Trasporti','Ristoranti','Salute','Svago','Abbigliamento','Regali','Altro'];
-const DEFAULT_CATS_IN = ['Stipendio','Rimborsi','Regali','Vendite','Interessi','Altro'];
+const DEFAULT_CATS_OUT = ['Cibo','Manga e libri','Videogiochi','Magic: The Gathering','Riftbound','Abbigliamento','Abbonamenti','Psicologa','Nutrizionista','Palestra','Spese mediche','Università','Macchina','Viaggi e trasporti','Film','Regali','Concerti','Elettronica','Fiere del fumetto','Action Figures'];
+const DEFAULT_CATS_IN = ['Stipendio','Vendite'];
 let db = load();
+if(!db.cats || !Array.isArray(db.cats.uscita) || !Array.isArray(db.cats.entrata)) db.cats = {uscita:[...DEFAULT_CATS_OUT], entrata:[...DEFAULT_CATS_IN]};
+const sameCat = (a,b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+// Aggiunge una categoria all'elenco se non c'è già; restituisce il nome "ufficiale"
+function addCat(tipo, nome){
+  nome = String(nome||'').trim(); if(!nome) return nome;
+  const ex = db.cats[tipo].find(c => sameCat(c, nome)); if(ex) return ex;
+  db.cats[tipo].push(nome); return nome;
+}
 function load(){
   try{ const r = JSON.parse(localStorage.getItem(KEY)); if(r && Array.isArray(r.mov) && Array.isArray(r.risp)) return r; }catch(e){}
   return {mov:[], risp:[]};
@@ -503,11 +531,17 @@ function categorie(tipo){
   for(const x of db.mov) if(!tipo || x.tipo === tipo) set.set(x.categoria.toLowerCase(), x.categoria);
   return [...set.values()].sort((a,b)=>a.localeCompare(b,'it'));
 }
+function renderCats(){
+  for(const t of ['uscita','entrata'])
+    $('#cats-'+t).innerHTML = db.cats[t].length ? db.cats[t].map(c=>`<span class="chip">${esc(c)}<button type="button" class="chip-x" data-rmcat="${esc(c)}" data-t="${t}" aria-label="Togli ${esc(c)}">✕</button></span>`).join('') : '<span class="muted small">Nessuna categoria.</span>';
+}
 function renderDatalists(){
   const tipo = document.querySelector('input[name=tipo]:checked').value;
-  const used = categorie(tipo), defs = tipo === 'entrata' ? DEFAULT_CATS_IN : DEFAULT_CATS_OUT;
-  const all = [...used, ...defs.filter(d => !used.some(u => u.toLowerCase() === d.toLowerCase()))];
+  const all = db.cats[tipo];
   $('#catList').innerHTML = all.map(c=>`<option value="${esc(c)}">`).join('');
+  const curCat = $('#mCat').value;
+  $('#catChips').innerHTML = all.map(c=>`<button type="button" class="chip${sameCat(c,curCat)?' on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
+  renderCats();
   const voci = [...new Map(db.risp.map(r=>[r.voce.toLowerCase(), r.voce])).values()];
   const vdef = ['Conto corrente','Conto deposito','Libretto postale','Contanti','Investimenti','Salvadanaio'];
   $('#voceList').innerHTML = [...voci, ...vdef.filter(d=>!voci.some(v=>v.toLowerCase()===d.toLowerCase()))].map(c=>`<option value="${esc(c)}">`).join('');
@@ -636,7 +670,7 @@ $('#movForm').addEventListener('submit', e => {
   if(!(imp > 0)){ toast('Inserisci un importo maggiore di zero (es. 12,50).'); $('#mImp').focus(); return; }
   if(!data || !cat){ toast('Data e categoria sono obbligatorie.'); return; }
   const tipo = document.querySelector('input[name=tipo]:checked').value;
-  const catNorm = categorie().find(c => c.toLowerCase() === cat.toLowerCase()) || cat;
+  const catNorm = addCat(tipo, cat);
   const rec = {data, tipo, categoria:catNorm, importo:r2(imp), note:$('#mNote').value.trim()};
   if(editMov){ Object.assign(db.mov.find(x=>x.id===editMov), rec); toast('Movimento aggiornato'); }
   else { db.mov.push({id:uid(), creato:new Date().toISOString(), ...rec}); toast(`${tipo==='entrata'?'Entrata':'Uscita'} di ${fmt(rec.importo)} aggiunta`); }
@@ -645,6 +679,13 @@ $('#movForm').addEventListener('submit', e => {
   resetMovForm(); $('#mData').value = keepDate; document.querySelector(`input[name=tipo][value=${keepTipo}]`).checked = true; renderDatalists();
   closeMov(); renderAll();
 });
+$('#catChips').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if(!b) return; $('#mCat').value = b.dataset.cat; renderDatalists(); if(!$('#mImp').value) $('#mImp').focus(); });
+$('#mCat').addEventListener('input', () => document.querySelectorAll('#catChips .chip').forEach(c => c.classList.toggle('on', sameCat(c.dataset.cat, $('#mCat').value))));
+$('#catForm').addEventListener('submit', e => { e.preventDefault(); const t = $('#newCatTipo').value, n = $('#newCat').value.trim(); if(!n) return;
+  if(db.cats[t].some(c => sameCat(c,n))){ toast('Questa categoria esiste già.'); return; }
+  addCat(t, n); save(); $('#newCat').value = ''; renderDatalists(); toast(`Categoria "${n}" aggiunta`); });
+['uscita','entrata'].forEach(t => $('#cats-'+t).addEventListener('click', e => { const b = e.target.closest('[data-rmcat]'); if(!b) return;
+  db.cats[t] = db.cats[t].filter(c => c !== b.dataset.rmcat); save(); renderDatalists(); }));
 $('#movCancel').onclick = () => { closeMov(); if(editMov) resetMovForm(); };
 document.querySelectorAll('input[name=tipo]').forEach(r => r.addEventListener('change', renderDatalists));
 $('#tblMov').addEventListener('click', async e => {
@@ -753,20 +794,23 @@ function parseCsv(text){
   return rows.filter(r => r.some(c => String(c).trim() !== ''));
 }
 const norm = s => String(s ?? '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');
+// Per ogni campo, i nomi di colonna riconosciuti in ordine di preferenza
 const ALIAS = {
   data:['data','date','giorno','datamovimento','dataoperazione','datavaluta','datacontabile'],
   tipo:['tipo','tipologia','type','segno','entrateuscite','entratauscita','movimento'],
-  categoria:['categoria','category','causale','descrizione','voce'],
-  importo:['importo','soldi','amount','valore','euro','spesa','cifra','totale'],
-  nota:['nota','note','notes','commento','dettaglio','memo'],
-  entrate:['entrate','entrata','accrediti','avere','income'],
-  uscite:['uscite','uscita','addebiti','dare','expense','spese'],
+  categoria:['etichetta','categoria','category','label','tag','causale','descrizione','voce'],
+  importo:['costoricavo','ricavocosto','importo','soldi','amount','valore','euro','costo','spesa','cifra','prezzo','totale'],
+  nota:['nota','note','notes','commento','dettaglio','memo','descrizione','causale'],
+  entrate:['entrate','entrata','accrediti','avere','income','ricavi','ricavo'],
+  uscite:['uscite','uscita','addebiti','dare','expense','spese','costi'],
   voce:['voce','conto','account','risparmio','nome'],
   saldo:['saldo','balance','valoreattuale']
 };
 function mapHeaders(hdr){
   const h = hdr.map(norm), out = {};
-  for(const k in ALIAS){ const i = h.findIndex(x => ALIAS[k].includes(x)); if(i > -1) out[k] = i; }
+  for(const k in ALIAS){
+    for(const a of ALIAS[k]){ const i = h.indexOf(a); if(i > -1 && !(k === 'nota' && i === out.categoria)){ out[k] = i; break; } }
+  }
   return out;
 }
 function rowsToRecords(aoa){
@@ -776,6 +820,9 @@ function rowsToRecords(aoa){
   const m = mapHeaders(aoa[hi]), body = aoa.slice(hi+1);
   const isRisp = 'saldo' in m && !('importo' in m) && !('entrate' in m) && !('uscite' in m);
   const recs = []; let skipped = 0;
+  // Colonna unica senza segno (tutti importi positivi) e senza colonna Tipo:
+  // il tipo si decide dalla categoria (entrata se è tra le categorie di entrata).
+  const noSign = 'importo' in m && !('tipo' in m) && !body.some(r => parseAmount(r[m.importo]) < 0);
   for(const r of body){
     const data = parseDate(r[m.data]);
     if(isRisp){
@@ -787,9 +834,10 @@ function rowsToRecords(aoa){
     if('importo' in m){ imp = parseAmount(r[m.importo]); }
     else { const e = parseAmount(r[m.entrate]), u = parseAmount(r[m.uscite]); if(e && !isNaN(e)) { imp = Math.abs(e); tipo = 'entrata'; } else if(u && !isNaN(u)){ imp = Math.abs(u); tipo = 'uscita'; } }
     if(!tipo && 'tipo' in m){ const t = norm(r[m.tipo]); if(/^(e|entrat|in|income|accred|ricav|\+)/.test(t) || t === 'avere') tipo = 'entrata'; else if(/^(u|uscit|out|spes|expense|addeb|dare)/.test(t)) tipo = 'uscita'; else if(String(r[m.tipo]).trim() === '+') tipo = 'entrata'; else if(String(r[m.tipo]).trim() === '-') tipo = 'uscita'; }
-    if(!tipo && !isNaN(imp)) tipo = imp < 0 ? 'uscita' : 'entrata';
     const catIdx = 'categoria' in m ? m.categoria : ('voce' in m ? m.voce : -1);
-    const categoria = String(catIdx > -1 ? r[catIdx] ?? '' : '').trim() || 'Senza categoria';
+    let categoria = String(catIdx > -1 ? r[catIdx] ?? '' : '').trim() || 'Senza categoria';
+    if(!tipo && !isNaN(imp)) tipo = noSign ? (db.cats.entrata.some(c => sameCat(c, categoria)) ? 'entrata' : 'uscita') : (imp < 0 ? 'uscita' : 'entrata');
+    if(tipo){ const known = db.cats[tipo].find(c => sameCat(c, categoria)); if(known) categoria = known; }
     if(!data || isNaN(imp) || imp === 0){ skipped++; continue; }
     recs.push({id:uid(), creato:new Date().toISOString(), data, tipo, categoria, importo:r2(Math.abs(imp)), note:'nota' in m ? String(r[m.nota] ?? '').trim() : ''});
   }
@@ -805,7 +853,7 @@ $('#fileIn').addEventListener('change', async e => {
       if(text.includes('�')) text = new TextDecoder('windows-1252').decode(buf);
       sheets.push({name:f.name, aoa:parseCsv(text)});
     } else {
-      const wb = XLSX.read(await f.arrayBuffer(), {type:'array', cellDates:true});
+      const wb = XLSX.read(await f.arrayBuffer(), {type:'array'});
       for(const n of wb.SheetNames) sheets.push({name:n, aoa:XLSX.utils.sheet_to_json(wb.Sheets[n], {header:1, raw:true, defval:''})});
     }
     const res = sheets.map(s => ({name:s.name, ...rowsToRecords(s.aoa)})).filter(s => s.kind);
@@ -819,7 +867,7 @@ $('#fileIn').addEventListener('change', async e => {
     const keyM = x => [x.data, x.tipo, x.categoria.toLowerCase(), x.importo.toFixed(2), (x.note||'').toLowerCase()].join('|');
     const seen = new Map(); for(const x of db.mov){ const k = keyM(x); seen.set(k, (seen.get(k)||0)+1); }
     const fileSeen = new Map();
-    for(const x of mov){ const k = keyM(x); const n = (fileSeen.get(k)||0)+1; fileSeen.set(k, n); if(!replace && n <= (seen.get(k)||0)){ dupM++; continue; } db.mov.push(x); addM++; }
+    for(const x of mov){ const k = keyM(x); const n = (fileSeen.get(k)||0)+1; fileSeen.set(k, n); if(!replace && n <= (seen.get(k)||0)){ dupM++; continue; } addCat(x.tipo, x.categoria); db.mov.push(x); addM++; }
     for(const r of risp){ const ex = db.risp.find(y => y.data===r.data && y.voce.toLowerCase()===r.voce.toLowerCase()); if(ex){ if(ex.saldo === r.saldo){ dupR++; continue; } ex.saldo = r.saldo; addR++; } else { db.risp.push(r); addR++; } }
     save(); renderAll();
     out.innerHTML = `<span class="pos">Importati ${addM} movimenti e ${addR} saldi.</span>` + (dupM||dupR ? ` Saltati ${dupM+dupR} doppioni già presenti.` : '') + (skipped ? ` <span class="neg">${skipped} righe ignorate</span> perché senza data o importo validi.` : '');
@@ -829,7 +877,7 @@ $('#fileIn').addEventListener('change', async e => {
 });
 
 /* ============ Altro ============ */
-$('#wipe').onclick = async () => { if(await confirmBox('Cancellare definitivamente tutti i movimenti e i saldi? Esporta prima un backup se ti servono.', 'Cancella tutto')){ db = {mov:[], risp:[]}; save(); renderAll(); toast('Dati cancellati'); } };
+$('#wipe').onclick = async () => { if(await confirmBox('Cancellare definitivamente tutti i movimenti e i saldi? Le categorie restano. Esporta prima un backup se ti servono.', 'Cancella tutto')){ db = {mov:[], risp:[], cats:db.cats}; save(); renderAll(); toast('Dati cancellati'); } };
 $('#demo').onclick = async () => {
   if((db.mov.length || db.risp.length) && !(await confirmBox('Aggiungere dati di esempio a quelli esistenti?', 'Aggiungi'))) return;
   const n = new Date(); let seed = 7; const rnd = () => (seed = (seed*9301+49297)%233280)/233280;
