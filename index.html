@@ -158,14 +158,10 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
   .toast{bottom:calc(150px + env(safe-area-inset-bottom))}
   main{padding:12px}
   .card{padding:14px;border-radius:14px}
-  .kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
-  .kpis .kpi:first-child{grid-column:1/-1}
-  .kpi{padding:10px}
-  .kpi .lbl{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .kpi .val{font-size:clamp(13px,4vw,17px);white-space:nowrap}
-  .kpis .kpi:not(:first-child) .sub{display:none}
-  .kpis .kpi:first-child{padding:12px 14px}
-  .kpis .kpi:first-child .lbl{font-size:13px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+  .kpis .kpi:first-child{grid-column:1/-1;padding:12px 14px}
+  .kpi{padding:10px 12px}
+  .kpi .val{font-size:clamp(15px,5vw,20px);white-space:nowrap}
   .kpis .kpi:first-child .val{font-size:30px}
   .chartbox{height:230px}
   th,td{padding:8px 6px}
@@ -233,11 +229,10 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
 <main>
 <!-- MOVIMENTI -->
 <section id="tab-movimenti">
-  <div class="kpis">
-    <div class="kpi"><div class="lbl">Patrimonio corrente</div><div class="val" id="kPatr">–</div><div class="sub" id="kPatrSub"></div></div>
+  <div class="kpis kpis-mov">
+    <div class="kpi"><div class="lbl">Saldo (entrate − uscite)</div><div class="val" id="kNet">–</div><div class="sub" id="kNetSub"></div></div>
     <div class="kpi"><div class="lbl">Entrate</div><div class="val pos" id="kIn">–</div><div class="sub" id="kInSub"></div></div>
     <div class="kpi"><div class="lbl">Uscite</div><div class="val neg" id="kOut">–</div><div class="sub" id="kOutSub"></div></div>
-    <div class="kpi"><div class="lbl">Saldo</div><div class="val" id="kNet">–</div><div class="sub" id="kNetSub"></div></div>
   </div>
   <div class="card">
     <div class="row" style="margin-bottom:12px">
@@ -260,15 +255,9 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
     <div class="legend"><span><i style="background:var(--s-in)"></i>Entrate</span><span><i style="background:var(--s-out)"></i>Uscite</span></div>
     <div class="chartbox"><canvas id="chTrend"></canvas></div>
   </div>
-  <div class="grid2">
-    <div class="card">
-      <h2>Uscite per categoria</h2>
-      <div class="chartbox" id="catBox"><canvas id="chCat"></canvas></div>
-    </div>
-    <div class="card">
-      <h2>Andamento del patrimonio</h2>
-      <div class="chartbox"><canvas id="chPatr"></canvas></div>
-    </div>
+  <div class="card">
+    <h2>Uscite per categoria</h2>
+    <div class="chartbox" id="catBox"><canvas id="chCat"></canvas></div>
   </div>
   <div class="card">
     <h2>Riepilogo per categoria</h2>
@@ -278,9 +267,18 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
 
 <!-- RISPARMI -->
 <section id="tab-risparmi" hidden>
+  <div class="kpis kpis-risp">
+    <div class="kpi"><div class="lbl">Patrimonio totale</div><div class="val" id="kPatr">–</div><div class="sub">risparmi + saldo dei movimenti</div></div>
+    <div class="kpi"><div class="lbl">Risparmi</div><div class="val" id="kRisp">–</div><div class="sub" id="kRispSub"></div></div>
+    <div class="kpi"><div class="lbl">Saldo dei movimenti</div><div class="val" id="kMovNet">–</div><div class="sub">tutte le entrate − tutte le uscite</div></div>
+  </div>
   <div class="card">
-    <h2>Aggiorna un saldo</h2>
-    <p class="muted small" style="margin-top:-6px">Registra quanto hai su ogni conto, libretto, salvadanaio o investimento a una certa data. Il patrimonio corrente è la somma dell'ultimo saldo di ogni voce, più le entrate e meno le uscite registrate <em>dopo</em> la data dell'ultimo aggiornamento. Così ti basta aggiornare i saldi ogni tanto e i movimenti tengono il conto nel frattempo.</p>
+    <h2>Andamento del patrimonio</h2>
+    <div class="chartbox"><canvas id="chPatr"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>Aggiorna i risparmi</h2>
+    <p class="muted small" style="margin-top:-6px">Registra quanto hai su ogni conto, libretto, salvadanaio o investimento a una certa data. Per ogni voce conta l'ultimo saldo inserito. Il patrimonio totale è la somma dei risparmi più il saldo di tutti i movimenti (entrate meno uscite).</p>
     <form id="rispForm" class="row" autocomplete="off">
       <div class="field"><label for="rData">Data</label><input type="date" id="rData" required></div>
       <div class="field" style="flex:1 1 180px"><label for="rVoce">Voce</label><input id="rVoce" list="voceList" required placeholder="es. Conto corrente"></div>
@@ -291,7 +289,7 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
     <datalist id="voceList"></datalist>
   </div>
   <div class="card">
-    <h2>Situazione attuale</h2>
+    <h2>I tuoi risparmi</h2>
     <div class="tablewrap"><table id="tblVoci"></table></div>
   </div>
   <div class="card">
@@ -514,15 +512,15 @@ function getRange(){
 const inRange = (d,[a,b]) => d >= a && d <= b;
 
 /* ============ Patrimonio ============ */
-// Patrimonio a una data t = somma dell'ultimo saldo (≤ t) di ogni voce
-// + entrate − uscite con data > (data dell'aggiornamento più recente ≤ t) e ≤ t.
+// Patrimonio a una data t = risparmi (ultimo saldo ≤ t di ogni voce)
+// + saldo di tutti i movimenti fino a t (entrate − uscite).
 function patrimonioAl(t){
-  const latest = {}; let ref = null;
-  for(const r of db.risp){ if(r.data <= t){ const k = r.voce.toLowerCase(); if(!latest[k] || latest[k].data <= r.data) latest[k] = r; if(!ref || r.data > ref) ref = r.data; } }
+  const latest = {};
+  for(const r of db.risp){ if(r.data <= t){ const k = r.voce.toLowerCase(); if(!latest[k] || latest[k].data <= r.data) latest[k] = r; } }
   let tot = 0; for(const k in latest) tot += latest[k].saldo;
   let delta = 0;
-  for(const x of db.mov){ if(x.data <= t && (!ref || x.data > ref)) delta += x.tipo === 'entrata' ? x.importo : -x.importo; }
-  return {tot: r2(tot + delta), saldi: r2(tot), delta: r2(delta), ref, voci: Object.values(latest)};
+  for(const x of db.mov){ if(x.data <= t) delta += x.tipo === 'entrata' ? x.importo : -x.importo; }
+  return {tot: r2(tot + delta), saldi: r2(tot), delta: r2(delta), voci: Object.values(latest)};
 }
 
 /* ============ Rendering ============ */
@@ -578,13 +576,10 @@ function renderOverview(){
   const tin = r2(mov.filter(x=>x.tipo==='entrata').reduce((s,x)=>s+x.importo,0));
   const tout = r2(mov.filter(x=>x.tipo==='uscita').reduce((s,x)=>s+x.importo,0));
   const net = r2(tin - tout);
-  const p = patrimonioAl(today());
-  $('#kPatr').textContent = (db.risp.length || db.mov.length) ? fmt(p.tot) : '–';
-  $('#kPatrSub').textContent = db.risp.length ? `saldi al ${itDate(p.ref)}: ${fmt(p.saldi)} · movimenti dopo: ${p.delta>=0?'+':''}${fmt(p.delta)}` : 'aggiungi i tuoi saldi in Risparmi';
   $('#kIn').textContent = fmt(tin); $('#kInSub').textContent = `${mov.filter(x=>x.tipo==='entrata').length} movimenti`;
   $('#kOut').textContent = fmt(tout); $('#kOutSub').textContent = `${mov.filter(x=>x.tipo==='uscita').length} movimenti`;
   const kn = $('#kNet'); kn.textContent = (net>0?'+':'') + fmt(net); kn.className = 'val ' + (net >= 0 ? 'pos' : 'neg');
-  $('#kNetSub').textContent = tin > 0 ? `hai messo da parte il ${Math.round(net/tin*100)}% delle entrate` : '';
+  $('#kNetSub').textContent = net < 0 ? `hai speso ${fmt(-net)} più di quanto hai guadagnato` : (tin > 0 ? `ti è rimasto il ${Math.round(net/tin*100)}% di quanto hai guadagnato` : '');
 
   // Trend: per giorno se il periodo è breve, altrimenti per mese
   const [a0,b0] = range;
@@ -660,12 +655,15 @@ function renderMov(){
 
 function renderRisp(){
   const p = patrimonioAl(today());
+  const sg = n => (n>=0?'+':'−') + fmt(Math.abs(n));
+  $('#kPatr').textContent = fmt(p.tot);
+  $('#kRisp').textContent = fmt(p.saldi); $('#kRispSub').textContent = p.voci.length ? `${p.voci.length} ${p.voci.length===1?'voce':'voci'}` : 'nessun saldo inserito';
+  const km = $('#kMovNet'); km.textContent = sg(p.delta); km.className = 'val ' + (p.delta >= 0 ? 'pos' : 'neg');
   const voci = p.voci.sort((a,b)=>b.saldo-a.saldo);
   $('#tblVoci').innerHTML = voci.length ? `<thead><tr><th>Voce</th><th>Ultimo aggiornamento</th><th class="num">Saldo</th></tr></thead><tbody>` +
-    voci.map(v=>`<tr><td>${esc(v.voce)}</td><td>${itDate(v.data)}</td><td class="num">${fmt(v.saldo)}</td></tr>`).join('') +
-    `<tr><td>Movimenti dopo il ${itDate(p.ref)}</td><td></td><td class="num ${p.delta>=0?'pos':'neg'}">${p.delta>=0?'+':'−'}${fmt(Math.abs(p.delta))}</td></tr></tbody>` +
-    `<tfoot><tr class="foot"><td colspan="2">Patrimonio corrente</td><td class="num">${fmt(p.tot)}</td></tr></tfoot>`
-    : `<tbody><tr><td class="empty">Nessun saldo registrato. Inserisci quanto hai oggi su ogni conto per calcolare il patrimonio.</td></tr></tbody>`;
+    voci.map(v=>`<tr><td>${esc(v.voce)}</td><td>${itDate(v.data)}</td><td class="num">${fmt(v.saldo)}</td></tr>`).join('') + `</tbody>` +
+    `<tfoot><tr class="foot"><td colspan="2">Totale risparmi</td><td class="num">${fmt(p.saldi)}</td></tr></tfoot>`
+    : `<tbody><tr><td class="empty">Nessun saldo registrato. Inserisci quanto hai messo da parte su ogni conto.</td></tr></tbody>`;
   const rows = [...db.risp].sort((a,b)=> b.data.localeCompare(a.data) || a.voce.localeCompare(b.voce,'it'));
   $('#tblRisp').innerHTML = rows.length ? `<thead><tr><th>Data</th><th>Voce</th><th class="num">Saldo</th><th></th></tr></thead><tbody>` +
     rows.map(r=>`<tr><td>${itDate(r.data)}</td><td>${esc(r.voce)}</td><td class="num">${fmt(r.saldo)}</td><td class="num"><button class="iconbtn" title="Modifica" data-redit="${r.id}">✏️</button><button class="iconbtn" title="Elimina" data-rdel="${r.id}">🗑️</button></td></tr>`).join('') + '</tbody>'
@@ -932,7 +930,7 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button').forEach(x => x.setAttribute('aria-selected', x===b));
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'tab-' + b.dataset.tab);
   window.scrollTo(0,0);
-  if(b.dataset.tab === 'panoramica') renderOverview();
+  if(b.dataset.tab === 'panoramica' || b.dataset.tab === 'risparmi') renderOverview();
 });
 $('#periodo').onchange = () => { $('#customRange').hidden = $('#periodo').value !== 'custom';
   if($('#periodo').value === 'custom' && !$('#dal').value){ const [a,b] = getRange(); $('#dal').value = iso(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); $('#al').value = today(); }
