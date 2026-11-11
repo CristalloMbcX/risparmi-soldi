@@ -107,6 +107,11 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .right{margin-left:auto}
 .foot{font-weight:600}
+#tblCat .c-meta{display:none}
+#tblCat th{cursor:default}
+#tblCat tr.grp td{font-weight:700;background:var(--surface-2);font-size:13px}
+.pbar{display:block;height:4px;border-radius:2px;background:var(--grid);margin-top:6px;overflow:hidden}
+.pbar i{display:block;height:100%;border-radius:2px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{display:inline-flex;align-items:center;gap:4px;font:inherit;font-size:13px;padding:5px 11px;border-radius:99px;border:1px solid var(--axis);background:var(--surface);color:var(--ink);cursor:pointer}
 span.chip{cursor:default}
@@ -161,6 +166,16 @@ body.adding .sheet,body.adding .sheet-bg{display:block}
   .chartbox{height:230px}
   th,td{padding:8px 6px}
   .field{flex:1 1 140px}
+  /* riepilogo per categoria a schede */
+  #tblCat thead,#tblCat .c-n,#tblCat .c-pc,#tblCat .c-avg{display:none}
+  #tblCat tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;padding:10px 2px;border-bottom:1px solid var(--grid)}
+  #tblCat tbody td{border:0;padding:0;background:none!important;white-space:normal}
+  #tblCat td.c-cat{font-weight:600}
+  #tblCat td.c-tot{font-weight:700;white-space:nowrap}
+  #tblCat td.c-meta{display:block;grid-column:1/-1;color:var(--muted);font-size:13px;margin-top:2px}
+  #tblCat tr.grp{background:var(--surface-2);border-radius:8px;padding:8px 10px;border-bottom:0;margin-top:6px}
+  #tblCat tr.grp td:last-child{display:none}
+  #tblCat td.empty{grid-column:1/-1}
   /* elenco movimenti a schede */
   #tblMov thead{display:none}
   #tblMov tbody tr{display:grid;grid-template-columns:1fr auto;grid-template-areas:"cat imp" "data act" "note note";column-gap:8px;padding:10px 2px;border-bottom:1px solid var(--grid)}
@@ -575,8 +590,12 @@ function renderOverview(){
   const sum = {};
   for(const x of mov){ const k = x.tipo + '|' + x.categoria; (sum[k] ||= {tipo:x.tipo, cat:x.categoria, tot:0, n:0}); sum[k].tot += x.importo; sum[k].n++; }
   const rows = Object.values(sum).sort((p,q)=> p.tipo===q.tipo ? q.tot-p.tot : (p.tipo==='uscita'?-1:1));
-  $('#tblCat').innerHTML = rows.length ? `<thead><tr><th>Tipo</th><th>Categoria</th><th class="num">Movimenti</th><th class="num">Totale</th><th class="num">% sul tipo</th><th class="num">Media</th></tr></thead><tbody>` +
-    rows.map(r=>`<tr><td><span class="pill ${r.tipo==='entrata'?'in':'out'}">${r.tipo==='entrata'?'Entrata':'Uscita'}</span></td><td>${esc(r.cat)}</td><td class="num">${r.n}</td><td class="num">${fmt(r.tot)}</td><td class="num">${Math.round(r.tot/((r.tipo==='entrata'?tin:tout)||1)*100)}%</td><td class="num">${fmt(r.tot/r.n)}</td></tr>`).join('') + '</tbody>'
+  const grp = t => { const rs = rows.filter(r => r.tipo === t); if(!rs.length) return ''; const tot = t === 'entrata' ? tin : tout;
+    return `<tr class="grp"><td colspan="2">${t==='entrata'?'Entrate':'Uscite'}</td><td class="num">${fmt(tot)}</td><td colspan="2"></td></tr>` +
+      rs.map(r => { const pc = Math.round(r.tot/(tot||1)*100);
+        return `<tr><td class="c-cat">${esc(r.cat)}</td><td class="num c-n">${r.n}</td><td class="num c-tot">${fmt(r.tot)}</td><td class="num c-pc">${pc}%</td><td class="num c-avg">${fmt(r.tot/r.n)}</td>` +
+          `<td class="c-meta">${r.n} ${r.n===1?'movimento':'movimenti'} · ${pc}% · media ${fmt(r.tot/r.n)}<span class="pbar"><i style="width:${Math.max(pc,1)}%;background:var(--s-${t==='entrata'?'in':'out'})"></i></span></td></tr>`; }).join(''); };
+  $('#tblCat').innerHTML = rows.length ? `<thead><tr><th>Categoria</th><th class="num">Movimenti</th><th class="num">Totale</th><th class="num">% sul tipo</th><th class="num">Media</th></tr></thead><tbody>` + grp('uscita') + grp('entrata') + '</tbody>'
     : `<tbody><tr><td class="empty">Nessun movimento nel periodo selezionato.</td></tr></tbody>`;
 }
 
